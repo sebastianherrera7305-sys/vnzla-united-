@@ -1,0 +1,21 @@
+*, *::before, *::after { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #0a0a0a; color: #eee; margin: 0; padding: 20px; }
+header { text-align: center; margin-bottom: 30px; }
+header h1 { color: #FFCC00; margin: 0 0 4px; }
+header p { margin: 0; color: #aaa; }
+form { display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 8px; }
+input, select, button { padding: 10px; border-radius: 5px; border: 1px solid #333; background: #222; color: #fff; font-size: 16px; }
+button { background: #FFCC00; color: #000; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.checkbox-group { display: flex; flex-direction: column; gap: 6px; }
+.checkbox-group label { display: flex; align-items: center; gap: 8px; font-size: 15px; cursor: pointer; }
+#status-msg { max-width: 500px; margin: 8px auto 0; text-align: center; min-height: 1.4em; }
+#list-section { margin-top: 40px; }
+#list-section h2 { text-align: center; }
+#reportes-lista { max-width: 500px; margin: 0 auto; }
+.reporte-card { background: #1a1a1a; padding: 12px; margin-bottom: 8px; border-radius: 6px; border-left: 4px solid #FFCC00; }
+.reporte-card p { margin: 4px 0 0; font-size: 14px; }
+.reporte-card small { color: #888; font-size: 12px; }
+.reporte-card.critico { border-left-color: #ff3333; }
+.reporte-card.alto { border-left-color: #ff8800; }
+@media (max-width: 540px) { body { padding: 12px; } form { padding: 16px; } }

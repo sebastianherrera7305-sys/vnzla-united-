@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Venezuela United — Terremoto 2026</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>🇻🇪 Venezuela United</h1>
+  <p>Plataforma ciudadana — Terremoto Junio 2026</p>
+</header>
+
+<main>
+  <section id="form-section">
+    <h2>Reportar Necesidad</h2>
+    <form id="necesidad-form">
+      <input type="text" id="nombre" placeholder="Nombre completo" required>
+      <input type="tel" id="contacto" placeholder="Teléfono de contacto" required>
+      <input type="text" id="ubicacion" placeholder="Ubicación actual (ciudad, sector)" required>
+      <input type="number" id="personas" placeholder="Cuántas personas en el grupo" min="1" required>
+
+      <label>Necesidades urgentes:</label>
+      <label><input type="checkbox" name="necesidad" value="agua"> Agua</label>
+      <label><input type="checkbox" name="necesidad" value="comida"> Comida</label>
+      <label><input type="checkbox" name="necesidad" value="refugio"> Refugio</label>
+      <label><input type="checkbox" name="necesidad" value="medicinas"> Medicinas</label>
+      <label><input type="checkbox" name="necesidad" value="atencion_medica"> Atención médica urgente</label>
+      <label><input type="checkbox" name="necesidad" value="ropa"> Ropa</label>
+
+      <select id="urgencia" required>
+        <option value="">Nivel de urgencia</option>
+        <option value="critico">Crítico</option>
+        <option value="alto">Alto</option>
+        <option value="moderado">Moderado</option>
+      </select>
+
+      <button type="submit">Enviar Reporte</button>
+    </form>
+    <p id="status-msg"></p>
+  </section>
+
+  <section id="list-section">
+    <h2>Reportes Recientes</h2>
+    <div id="reportes-lista"></div>
+  </section>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
