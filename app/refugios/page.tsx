@@ -1,85 +1,139 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { collection, addDoc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import Link from 'next/link'
+import { Home, MapPin, Users, CheckCircle } from 'lucide-react'
 
-const SVCS = ['Agua potable','Comida','Electricidad','Internet','Atención médica','Baños','Sillas de ruedas','Área para niños']
+interface Refugio {
+  id: string
+  nombre: string
+  direccion: string
+  capacidad: number
+  ocupados: number
+  servicios: string
+  contacto: string
+  createdAt: any
+}
 
 export default function RefugiosPage() {
-  const [tab, setTab] = useState<'ver'|'registrar'>('ver')
-  const [lista, setLista] = useState<any[]>([])
-  const [form, setForm] = useState({ nombre: '', direccion: '', capacidadTotal: '', ocupacionActual: '', contacto: '' })
-  const [svcs, setSvcs] = useState<string[]>([])
-  const [status, setStatus] = useState<'idle'|'loading'|'ok'>('idle')
-  useEffect(() => onSnapshot(query(collection(db,'refugios'),orderBy('timestamp','desc')),
-    s => setLista(s.docs.map(d => ({ id: d.id, ...d.data() })))), [])
-  const toggle = (s: string) => setSvcs(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s])
+  const [lista, setLista] = useState<Refugio[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [ok, setOk] = useState(false)
+  const [form, setForm] = useState({ nombre: '', direccion: '', capacidad: '', ocupados: '', servicios: '', contacto: '' })
+
+  useEffect(() => {
+    const q = query(collection(db, 'refugios'), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, snap => setLista(snap.docs.map(d => ({ id: d.id, ...d.data() } as Refugio))))
+  }, [])
+
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setStatus('loading')
+    e.preventDefault()
+    setLoading(true)
     try {
-      await addDoc(collection(db,'refugios'), { ...form, capacidadTotal: parseInt(form.capacidadTotal)||0, ocupacionActual: parseInt(form.ocupacionActual)||0, servicios: svcs, activo: true, timestamp: Timestamp.now() })
-      setStatus('ok'); setForm({ nombre: '', direccion: '', capacidadTotal: '', ocupacionActual: '', contacto: '' }); setSvcs([])
-    } catch { setStatus('idle') }
+      await addDoc(collection(db, 'refugios'), {
+        ...form, capacidad: Number(form.capacidad), ocupados: Number(form.ocupados), createdAt: serverTimestamp()
+      })
+      setOk(true)
+      setForm({ nombre: '', direccion: '', capacidad: '', ocupados: '', servicios: '', contacto: '' })
+    } finally { setLoading(false) }
   }
+
   return (
     <div className="pb-28">
-      <div className="px-5 pt-8 pb-6" style={{ background: 'linear-gradient(160deg,#451A03,#D97706)' }}>
-        <Link href="/" className="text-white/50 text-sm mb-4 block">← Inicio</Link>
-        <h1 className="text-white font-black text-3xl leading-tight">Red de<br/>Refugios 🏗️</h1>
-        <p className="text-white/60 mt-2 text-sm">{lista.filter((r: any) => r.activo && r.ocupacionActual < r.capacidadTotal).length} con espacio disponible</p>
-      </div>
-      <div className="px-4 mt-4">
-        <div className="flex gap-1 p-1 rounded-2xl mb-4" style={{ background: 'var(--border-ui)' }}>
-          {(['ver','registrar'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-              style={tab === t ? { background: 'var(--surface)', color: 'var(--text)', boxShadow: '0 1px 8px rgba(0,0,0,0.1)' } : { color: 'var(--muted)' }}>
-              {t === 'ver' ? '🏠 Ver refugios' : '➕ Registrar'}
-            </button>
-          ))}
+      <div className="relative overflow-hidden rounded-3xl mb-8 p-8" style={{ background: 'linear-gradient(135deg, #7c2d12 0%, #c2410c 100%)' }}>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(251,146,60,0.2)' }}>
+              <Home className="w-6 h-6 text-orange-300" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Refugios</h1>
+              <p className="text-orange-200 text-sm">{lista.length} refugios activos</p>
+            </div>
+          </div>
         </div>
-        {tab === 'ver' ? (
-          <div className="space-y-3">
-            {lista.map((r: any) => {
-              const pct = r.capacidadTotal > 0 ? Math.round((r.ocupacionActual / r.capacidadTotal) * 100) : 0
-              const libre = r.capacidadTotal - r.ocupacionActual
-              return (
-                <div key={r.id} className="card-premium p-5 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div><p className="font-bold" style={{ color: 'var(--text)' }}>{r.nombre}</p><p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>📍 {r.direccion}</p></div>
-                    <span className={\`badge flex-shrink-0 \${libre > 0 ? 'badge-safe' : 'badge-critico'}\`}>{libre > 0 ? \`\${libre} lugares\` : 'Lleno'}</span>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-1.5" style={{ color: 'var(--muted)' }}><span>{r.ocupacionActual}/{r.capacidadTotal} personas</span><span>{pct}%</span></div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: \`\${Math.min(pct,100)}%\`, background: pct>=90?'#EF4444':pct>=70?'#F59E0B':'#10B981' }}/>
+      </div>
+
+      <div className="flex justify-between items-center mb-6">
+        <p className="text-slate-600 font-medium">{lista.length} refugios disponibles</p>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm px-4 py-2">
+          {showForm ? 'Ver lista' : '+ Registrar Refugio'}
+        </button>
+      </div>
+
+      {showForm ? (
+        <div className="card-premium p-6">
+          {ok ? (
+            <div className="text-center py-8">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Refugio Registrado</h3>
+              <button onClick={() => { setOk(false); setShowForm(false) }} className="btn-primary">Ver refugios</button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="space-y-4">
+              <h2 className="text-lg font-bold text-slate-800">Registrar Refugio</h2>
+              {[
+                { key: 'nombre', label: 'Nombre del refugio', type: 'text' },
+                { key: 'direccion', label: 'Dirección', type: 'text' },
+                { key: 'capacidad', label: 'Capacidad total', type: 'number' },
+                { key: 'ocupados', label: 'Personas actuales', type: 'number' },
+                { key: 'servicios', label: 'Servicios disponibles', type: 'text' },
+                { key: 'contacto', label: 'Teléfono de contacto', type: 'tel' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{f.label}</label>
+                  <input type={f.type} required value={(form as any)[f.key]}
+                    onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-orange-400 bg-white text-slate-800" />
+                </div>
+              ))}
+              <button type="submit" disabled={loading} className="btn-hero w-full">
+                {loading ? 'Guardando...' : 'Registrar Refugio'}
+              </button>
+            </form>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {lista.length === 0 && <p className="text-center text-slate-500 py-12">No hay refugios registrados</p>}
+          {lista.map(r => {
+            const pct = r.capacidad > 0 ? Math.round((r.ocupados / r.capacidad) * 100) : 0
+            const libre = r.capacidad - r.ocupados
+            const badgeClass = libre > 10 ? 'badge-safe' : libre > 0 ? 'badge-alerta' : 'badge-critico'
+            const barColor = pct > 90 ? '#ef4444' : pct > 70 ? '#f59e0b' : '#22c55e'
+            return (
+              <div key={r.id} className="card-premium p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7c2d12, #c2410c)' }}>
+                      <Home className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800">{r.nombre}</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{r.direccion}</p>
                     </div>
                   </div>
-                  {r.servicios?.length > 0 && <div className="flex flex-wrap gap-1.5">{r.servicios.map((s: string) => <span key={s} className="text-xs px-2.5 py-1 rounded-full" style={{ background: 'var(--bg)', color: 'var(--muted)' }}>{s}</span>)}</div>}
-                  {r.contacto && <p className="text-xs" style={{ color: 'var(--muted)' }}>📞 {r.contacto}</p>}
+                  <span className={'badge flex-shrink-0 ' + badgeClass}>
+                    {libre > 0 ? libre + ' libres' : 'Lleno'}
+                  </span>
                 </div>
-              )
-            })}
-            {!lista.length && <div className="card-premium p-10 text-center"><p className="text-4xl mb-3">🏗️</p><p style={{ color: 'var(--muted)' }}>No hay refugios registrados aún.</p></div>}
-          </div>
-        ) : status === 'ok' ? (
-          <div className="card-premium p-8 text-center"><p className="text-4xl mb-3">🏠</p><h2 className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>¡Refugio registrado!</h2><button className="btn-secondary mt-4" onClick={() => setStatus('idle')}>Registrar otro</button></div>
-        ) : (
-          <form onSubmit={submit} className="card-premium p-5 space-y-4">
-            <div className="space-y-1.5"><label>Nombre *</label><input required value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} placeholder="Ej: Escuela Simón Bolívar"/></div>
-            <div className="space-y-1.5"><label>Dirección *</label><input required value={form.direccion} onChange={e => setForm(p => ({ ...p, direccion: e.target.value }))} placeholder="Dirección completa"/></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><label>Capacidad *</label><input required type="number" min="1" value={form.capacidadTotal} onChange={e => setForm(p => ({ ...p, capacidadTotal: e.target.value }))} placeholder="Personas"/></div>
-              <div className="space-y-1.5"><label>Ocupación actual</label><input type="number" min="0" value={form.ocupacionActual} onChange={e => setForm(p => ({ ...p, ocupacionActual: e.target.value }))} placeholder="0"/></div>
-            </div>
-            <div className="space-y-2"><label>Servicios disponibles</label>
-              <div className="grid grid-cols-2 gap-2">{SVCS.map(s => <button key={s} type="button" onClick={() => toggle(s)} className="px-3 py-2.5 rounded-xl text-xs font-medium border-2 text-left transition-all" style={svcs.includes(s)?{background:'#EEF2FF',borderColor:'var(--blue-mid)',color:'var(--blue-mid)'}:{background:'var(--bg)',borderColor:'var(--border-ui)',color:'var(--text)'}}>{s}</button>)}</div>
-            </div>
-            <div className="space-y-1.5"><label>Teléfono</label><input type="tel" value={form.contacto} onChange={e => setForm(p => ({ ...p, contacto: e.target.value }))} placeholder="+58..."/></div>
-            <button type="submit" disabled={status === 'loading'} className="btn-primary">{status === 'loading' ? 'Registrando...' : '🏗️ Registrar Refugio'}</button>
-          </form>
-        )}
-      </div>
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span className="flex items-center gap-1"><Users className="w-3 h-3" />{r.ocupados}/{r.capacidad} personas</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: Math.min(pct, 100) + '%', background: barColor }} />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">Servicios: {r.servicios}</p>
+                <p className="text-xs text-slate-500">Contacto: {r.contacto}</p>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
